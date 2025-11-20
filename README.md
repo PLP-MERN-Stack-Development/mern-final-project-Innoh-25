@@ -2,6 +2,9 @@
 
 PharmaPin is a pharmacy discovery and management platform that connects patients with nearby pharmacies, lets pharmacists manage inventory, and provides authentication and administrative tools. This repository contains a Node/Express backend (MongoDB + Mongoose) and a React frontend (Vite).
 
+## Deployment link: https://pharma-pin.vercel.app/
+
+
 This README covers how the project is structured, how to run it locally, environment variables, API overview, and development tips
 ## Table of contents
 - Project status
@@ -174,4 +177,62 @@ If you plan to reintroduce orders later, keep in mind:
 	- `npm run lint` — run ESLint
 
 There are no automated tests configured at the moment. Adding unit and integration tests is recommended before shipping.
+
+## Tests (what's added and how to run)
+
+This project now includes a minimal automated test setup for both backend and frontend plus a CI job that runs unit tests and a smoke E2E.
+
+- Backend
+	- Framework: Jest + Supertest
+	- Purpose: API/integration tests against the Express app
+	- Run locally:
+
+```bash
+cd backend
+npm install
+npm test
+```
+
+- Frontend unit tests
+	- Framework: Vitest + @testing-library/react
+	- Purpose: component/unit tests
+	- Run locally (install once):
+
+```bash
+cd frontend
+npm install --legacy-peer-deps
+npm run test:run   # CI-style single run
+```
+
+- Frontend E2E (Cypress)
+	- Purpose: smoke/end-to-end checks against a built frontend
+	- To run locally:
+
+```bash
+cd frontend
+npm run build
+npx serve -s dist -l 3000    # serve the built site at http://localhost:3000
+npm run cypress:run-ci       # run Cypress headless against the served site
+```
+
+CI behavior
+- The repository contains a GitHub Actions workflow (`.github/workflows/ci.yml`) that:
+	- runs backend Jest/Supertest tests
+	- runs frontend Vitest unit tests
+	- builds the frontend
+	- runs a headless Cypress E2E job against the built frontend (served on port 3000)
+
+Notes and caveats
+- The Cypress E2E job is intentionally a smoke test that runs against the static frontend build; if you need E2E flows that exercise backend APIs (login, create, search), CI must start the backend or use a test backend with seeded data (I can add this on request).
+- Frontend uses React 19; some testing libraries have peer-dep constraints — use `npm install --legacy-peer-deps` locally or update lockfiles to ensure deterministic CI installs.
+
+## What's not implemented yet (short list)
+
+- Wireframes / mockups: there are no design assets in `docs/`. Add `docs/mockups/` if you want PNG/Figma exports.
+- Orders/ordering: intentionally removed (documented). Reintroduce carefully if you add order models and endpoints.
+- Real-time (Socket.io): not implemented. I can scaffold a non-invasive Socket.io server hook and client context for notifications.
+- Full test coverage: only minimal tests exist (health endpoint, a couple frontend component tests and a home smoke E2E). Add unit tests for `Login`, `Register`, `DrugSearch`, `SearchResults`, and integration tests for auth and inventory.
+- Deployment: CI builds the frontend and runs tests but does not automatically deploy. Add deployment jobs for Vercel/Netlify (frontend) and Render/Heroku (backend) as needed.
+
+If you want, I can continue by adding any of the above (pick one): expand frontend unit tests, add backend integration tests with a test DB, scaffold Socket.io, or add deployment workflows and monitoring.
 

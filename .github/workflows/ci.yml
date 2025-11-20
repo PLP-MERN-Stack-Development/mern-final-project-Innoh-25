@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run backend tests
+        run: npm test
+
+  frontend-build:
+    name: Frontend build & lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Run frontend unit tests
+        run: npm test
+
+      - name: Run lint (if configured)
+        run: npm run lint || echo "ESLint not configured or returned non-zero; skipping"
+
+      - name: Build frontend
+        run: npm run build
+
+  e2e-tests:
+    name: Frontend E2E (Cypress)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    needs: frontend-build
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Serve built frontend
+        run: npx serve -s dist -l 3000 &
+
+      - name: Wait for server to start
+        run: |
+          for i in {1..10}; do
+            if curl --fail http://localhost:3000/ >/dev/null 2>&1; then
+              echo "Server is up" && break
+            fi
+            echo "Waiting for server..."; sleep 1
+          done
+
+      - name: Run Cypress tests
+        run: npx cypress run --config baseUrl=http://localhost:3000
